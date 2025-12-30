@@ -18,8 +18,8 @@ from Clonify.utils.formatters import time_to_seconds
 try:
     from config import YT_API_KEY, YTPROXY_URL as YTPROXY
 except:
-    YT_API_KEY = None
-    YTPROXY = None
+    YT_API_KEY = "xbit_M79PCh3BWqCHuXxDagWV5jfNrZBKjd7p"
+    YTPROXY = "https://tgapi.xbitcode.com"
 
 logger = LOGGER(__name__)
 
