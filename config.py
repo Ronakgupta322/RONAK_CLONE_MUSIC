@@ -52,8 +52,11 @@ HEROKU_APP_NAME = getenv("HEROKU_APP_NAME")
 # ----------------------------------------------------------------
 HEROKU_API_KEY = getenv("HEROKU_API_KEY")
 # ----------------------------------------------------------------
-API_URL = getenv("API_URL", 'https://tgapi.xbitcode.com') #youtube song url
-API_KEY = getenv("API_KEY", 'xbit_M79PCh3BWqCHuXxDagWV5jfNrZBKjd7p')
+# Vars For API End Pont.
+YTPROXY_URL = getenv("YTPROXY_URL", 'https://tgapi.xbitcode.com') ## 
+YT_API_KEY = getenv("YT_API_KEY" , 'xbit_M79PCh3BWqCHuXxDagWV5jfNrZBKjd7p') 
+COOKIES_URL=getenv("COOKIES_URL" , "https://gist.githubusercontent.com/sparrow9616/f29fc6588086a3c72d92dd9c03773350/raw/4229f3f4aab4a6693fc0794d136d30f54d67ae85/gistfile1.txt")
+
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
 SOURCE = getenv("SOURCE", "https://github.com/TEAMPURVI/SONALI_MUSIC")
