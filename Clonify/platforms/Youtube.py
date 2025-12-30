@@ -1,85 +1,38 @@
 import asyncio
-import glob
-import json
 import os
-import random
 import re
-import requests
 import yt_dlp
+import requests
 
 from typing import Union
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from youtubesearchpython import VideosSearch
 from youtubesearchpython.__future__ import CustomSearch
 
 from Clonify import LOGGER
 from Clonify.utils.formatters import time_to_seconds
-from config import YT_API_KEY, YTPROXY_URL as YTPROXY
+
+# ===== SAFE CONFIG IMPORT =====
+try:
+    from config import YT_API_KEY, YTPROXY_URL as YTPROXY
+except:
+    YT_API_KEY = None
+    YTPROXY = None
 
 logger = LOGGER(__name__)
 
 
-# ================= COOKIE HANDLER =================
-def cookie_txt_file():
-    try:
-        folder = f"{os.getcwd()}/cookies"
-        txt_files = glob.glob(os.path.join(folder, "*.txt"))
-        return random.choice(txt_files) if txt_files else None
-    except:
-        return None
-
-
-# ================= SHELL =================
-async def shell_cmd(cmd):
-    proc = await asyncio.create_subprocess_shell(
-        cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    out, err = await proc.communicate()
-    return out.decode() if out else err.decode()
-
-
-# ================= YOUTUBE API =================
+# ============================
 class YouTubeAPI:
     def __init__(self):
         self.base = "https://www.youtube.com/watch?v="
-        self.listbase = "https://youtube.com/playlist?list="
         self.regex = r"(youtube\.com|youtu\.be)"
 
-    # ---------- INTERNAL SEARCH ----------
-    async def _search(self, query: str, limit=10):
-        search = VideosSearch(query, limit=limit)
-        data = await search.next()
-        results = []
-
-        for r in data.get("result", []):
-            dur = r.get("duration")
-            if not dur:
-                continue
-
-            try:
-                sec = time_to_seconds(dur)
-                if sec <= 3600:
-                    results.append(r)
-            except:
-                continue
-
-        if results:
-            return results[0]
-
-        # fallback
-        custom = CustomSearch(query, limit=1)
-        res = await custom.next()
-        return res["result"][0] if res.get("result") else None
-
-    # ---------- URL DETECT ----------
+    # ---------- URL CHECK ----------
     async def exists(self, link: str):
-        return bool(re.search(self.regex, link))
+        return bool(link and re.search(self.regex, link))
 
     # ---------- GET URL FROM MESSAGE ----------
     async def url(self, message: Message):
@@ -88,9 +41,9 @@ class YouTubeAPI:
         for msg in msgs:
             if not msg:
                 continue
-            entities = msg.entities or msg.caption_entities
             text = msg.text or msg.caption
-            if not entities or not text:
+            entities = msg.entities or msg.caption_entities
+            if not text or not entities:
                 continue
 
             for e in entities:
@@ -100,73 +53,91 @@ class YouTubeAPI:
                     return e.url
         return None
 
+    # ---------- SAFE SEARCH ----------
+    async def _safe_search(self, query: str):
+        if not query:
+            return None
+
+        try:
+            search = VideosSearch(query, limit=5)
+            data = await search.next()
+            results = data.get("result", [])
+
+            for r in results:
+                dur = r.get("duration")
+                if not dur:
+                    continue
+                try:
+                    if time_to_seconds(dur) <= 3600:
+                        return r
+                except:
+                    continue
+
+            # fallback
+            custom = CustomSearch(query, limit=1)
+            res = await custom.next()
+            if res.get("result"):
+                return res["result"][0]
+
+        except Exception as e:
+            logger.error(f"YouTube search error: {e}")
+
+        return None
+
     # ---------- DETAILS ----------
-    async def details(self, link: str):
-        result = await self._search(link)
+    async def details(self, query: str):
+        result = await self._safe_search(query)
         if not result:
-            raise ValueError("No video found")
+            raise ValueError("failed to process query")
 
         return (
             result["title"],
-            result["duration"],
-            time_to_seconds(result["duration"]),
+            result.get("duration", "0:00"),
+            time_to_seconds(result.get("duration", "0:00")),
             result["thumbnails"][0]["url"].split("?")[0],
             result["id"],
         )
 
-    async def title(self, link):
-        return (await self.details(link))[0]
+    # ---------- STREAM ----------
+    async def video(self, query: str):
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "yt-dlp",
+                "-f", "best[height<=720]",
+                "-g", query,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            out, err = await proc.communicate()
+            if out:
+                return 1, out.decode().strip()
+            return 0, err.decode()
+        except Exception as e:
+            return 0, str(e)
 
-    async def duration(self, link):
-        return (await self.details(link))[1]
-
-    async def thumbnail(self, link):
-        return (await self.details(link))[3]
-
-    # ---------- STREAM URL ----------
-    async def video(self, link):
-        proc = await asyncio.create_subprocess_exec(
-            "yt-dlp",
-            "--cookies", cookie_txt_file() or "",
-            "-f", "best[height<=720]",
-            "-g", link,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        out, err = await proc.communicate()
-        return (1, out.decode().strip()) if out else (0, err.decode())
-
-    # ---------- PLAYLIST ----------
-    async def playlist(self, link, limit=10):
-        cmd = f"yt-dlp -i --get-id --flat-playlist --playlist-end {limit} {link}"
-        data = await shell_cmd(cmd)
-        return [i for i in data.split("\n") if i]
-
-    # ---------- AUDIO DOWNLOAD ----------
+    # ---------- AUDIO DOWNLOAD (OPTIONAL API) ----------
     async def download_audio(self, vid_id):
         if not YT_API_KEY or not YTPROXY:
-            raise ValueError("YT API config missing")
+            raise ValueError("Audio API not configured")
 
         headers = {"x-api-key": YT_API_KEY}
-        filepath = f"downloads/{vid_id}.mp3"
+        path = f"downloads/{vid_id}.mp3"
+        os.makedirs("downloads", exist_ok=True)
 
-        if os.path.exists(filepath):
-            return filepath
+        if os.path.exists(path):
+            return path
 
-        session = requests.Session()
-        session.mount("https://", HTTPAdapter(max_retries=Retry(3)))
-
-        r = session.get(f"{YTPROXY}/info/{vid_id}", headers=headers)
+        r = requests.get(f"{YTPROXY}/info/{vid_id}", headers=headers, timeout=30)
         data = r.json()
 
         if data.get("status") != "success":
-            raise ValueError("API error")
+            raise ValueError("API failed")
 
         audio_url = data["audio_url"]
 
-        with session.get(audio_url, stream=True) as resp:
-            with open(filepath, "wb") as f:
+        with requests.get(audio_url, stream=True) as resp:
+            with open(path, "wb") as f:
                 for chunk in resp.iter_content(1024 * 512):
                     f.write(chunk)
 
-        return filepath
+        return path
