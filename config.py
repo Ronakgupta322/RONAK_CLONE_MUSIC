@@ -15,7 +15,7 @@ API_HASH = getenv("API_HASH")
 BOT_TOKEN = getenv("BOT_TOKEN")
 BOT_ID = getenv("BOT_ID")
 # -------------------------------------------------------
-OWNER_USERNAME = getenv("OWNER_USERNAME","ll_NOBITA_DEFAULTERS_ll")
+OWNER_USERNAME = getenv("OWNER_USERNAME","Ronakguptaji")
 # --------------------------------------------------------
 BOT_USERNAME = getenv("BOT_USERNAME" , "NOBITA_MUSIC_TG_BOT")
 # --------------------------------------------------------
@@ -75,9 +75,9 @@ GIT_TOKEN = getenv(
 
 #------------------------------------------------------------------------
 # -------------------------------------------------------------------------
-SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/NOB1TA_SUPPORT")
-SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/+E7jXcV6jpK0xMGJl")
-CHAT = getenv("CHAT", "https://t.me/+DRlOUMim-SdjOWJl")
+SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/RonakMusicUpdate")
+SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/RonakMUSICbox")
+CHAT = getenv("CHAT", "https://t.me/Ronakgupta32")
 # ------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------
 
@@ -162,7 +162,7 @@ HELP_IMG_URL = getenv(
     "HELP_IMG_URL", "https://i.ibb.co/xPjc7tv/help-menu.jpg"
 )
 
-START_IMG_URL = getenv("START_IMG_URL", "https://files.catbox.moe/q8bej6.jpg")
+START_IMG_URL = getenv("START_IMG_URL", "https://files.catbox.moe/wtqdvd.jpg")
 PING_IMG_URL = getenv("PING_IMG_URL", "https://files.catbox.moe/q8bej6.jpg")
 PLAYLIST_IMG_URL = "https://files.catbox.moe/f2s4ws.jpg"
 STATS_IMG_URL = "https://files.catbox.moe/q8bej6.jpg"
